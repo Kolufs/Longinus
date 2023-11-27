@@ -1,0 +1,8 @@
+[target.aarch64-unknown-linux-gnu]
+pre-build = ["dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libdbus-1-dev:arm64 libsqlite3-dev:arm64 libssl-dev:arm64"]
+
+[target.x86_64-unknown-linux-gnu]
+pre-build = ["apt-get update && apt-get install --assume-yes libdbus-1-dev libsqlite3-dev libssl-dev"]
+
+[target.mips64el-unknown-linux-muslabi64]
+pre-build = ["dpkg --add-architecture mips64el && apt-get update && apt-get install --assume-yes libdbus-1-dev:mips64el libsqlite3-dev:mips64el libssl-dev:mips64el"]
