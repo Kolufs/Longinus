@@ -37,7 +37,7 @@ impl Config {
             .read(true)
             .write(false)
             .create(false)
-            .open(config_file)
+            .open("config.json")
             .unwrap();
 
         let reader = BufReader::new(file);
