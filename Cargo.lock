@@ -688,6 +688,7 @@ dependencies = [
  "bytes",
  "chrono",
  "dns-lookup",
+ "indexmap 2.1.0",
  "linux-info",
  "nix 0.27.1",
  "pnet",

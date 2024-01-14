@@ -3,13 +3,13 @@ use pnet::datalink::{MacAddr, self, NetworkInterface, DataLinkReceiver};
 use pnet::packet::Packet;
 use pnet::packet::ethernet::EtherType;
 use pnet::packet::arp::ArpPacket; 
-use pnet::packet::ethernet::{EthernetPacket};
+use pnet::packet::ethernet::EthernetPacket;
 use std::borrow::BorrowMut;
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::ops::DerefMut;
-use std::collections::VecDeque;
 use std::{fs, net::Ipv4Addr, str::FromStr, collections::HashSet};
+use indexmap::IndexSet;
 
 enum ScanError {
     InterfaceNotFound,
@@ -22,9 +22,30 @@ impl From<std::io::Error> for ScanError {
     }
 }
 
+pub struct SizedIndexSet<T: std::hash::Hash + Eq> {
+    set: IndexSet<T>,
+    size: usize, 
+}
+
+impl<T: std::hash::Hash + Eq> SizedIndexSet<T> {
+    pub fn new(size: usize) -> Self {
+        Self {
+            set: IndexSet::new(),
+            size, 
+        }
+    }
+
+    pub fn insert(&mut self, element: T) -> bool {
+        if self.set.len() == self.size {
+            self.set.shift_remove_index(0); 
+        }
+        self.set.insert(element)
+    }
+}
+
 pub struct Scanner {
     rx: Box<dyn DataLinkReceiver>,
-    devices: Arc<Mutex<VecDeque<MacAddr>>>,
+    pub devices: Arc<Mutex<SizedIndexSet<MacAddr>>>,
 }
 
 impl Scanner {
@@ -40,7 +61,7 @@ impl Scanner {
 
         Ok(Scanner {
             rx,
-            devices: Arc::new(Mutex::new(VecDeque::with_capacity(1024))),
+            devices: Arc::new(Mutex::new(SizedIndexSet::new(1024))),
         })
     }
 
@@ -69,6 +90,7 @@ impl Scanner {
     } 
 
     fn scan(mut self) -> Result<Vec<MacAddr>, ScanError> {
+        loop {
         match self.rx.next() {
             Ok(packet) => {
                 let ethernet_packet = EthernetPacket::new(packet).unwrap();
@@ -76,11 +98,10 @@ impl Scanner {
                     EtherType(0x806) =>  {
                         if let Some(packet) = ArpPacket::new(packet) {
                             let sender_addr = packet.get_sender_hw_addr();
-                            (self.devices.try_lock().unwrap()).push_back(sender_addr); 
+                            (self.devices.try_lock().unwrap()).insert(sender_addr); 
                             let target_addr = packet.get_target_hw_addr(); 
-                            // If the target is a reply.
                             if !([MacAddr::broadcast(), MacAddr::new(0,0,0,0,0,0)].contains(&target_addr)) {
-                                (self.devices.try_lock().unwrap()).push_back(target_addr);
+                                (self.devices.try_lock().unwrap()).insert(target_addr);
                             };   
                             }
                         },
@@ -89,6 +110,6 @@ impl Scanner {
             },  
             Err(_) => ()
         };
-        todo!()
+        }
     }
 }
