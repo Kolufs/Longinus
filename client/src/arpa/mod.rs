@@ -89,7 +89,7 @@ impl Scanner {
         Self::fetch_default_interface_from_proc().or_else(Self::fetch_default_interface_from_pnet)
     } 
 
-    fn scan(mut self) -> Result<Vec<MacAddr>, ScanError> {
+    fn scan(mut self) {
         loop {
         match self.rx.next() {
             Ok(packet) => {
